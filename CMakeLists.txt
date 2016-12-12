@@ -26,6 +26,7 @@ catkin_package(
 find_package(PCL REQUIRED)
 set(VICON_SDK_DIR externalDependencies/vicon_sdk/)
 set(NATNET_DIR externalDependencies/NatNetLinux/)
+set(CDP_DIR externalDependencies/CDPParser/)
 
 ###########
 ## Build ##
@@ -37,6 +38,7 @@ include_directories(
   ${PCL_INCLUDE_DIRS}
   ${VICON_SDK_DIR}/include
   ${NATNET_DIR}/include
+  ${CDP_DIR}/include
 )
 
 link_directories(
@@ -48,6 +50,7 @@ add_library(libmotioncapture
   src/motioncapture.cpp
   src/vicon.cpp
   src/optitrack.cpp
+  src/cdp.cpp
 )
 
 ## Specify libraries to link a library or executable target against

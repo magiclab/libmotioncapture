@@ -1,0 +1,2 @@
+ADD_EXECUTABLE( testCDP "test.cpp" )
+TARGET_LINK_LIBRARIES( testCDP ${Boost_LIBRARIES} )

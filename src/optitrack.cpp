@@ -14,7 +14,7 @@ namespace libmotioncapture {
     MotionCaptureOptitrack::MotionCaptureOptitrack(std::string localIp,
                                                    std::string serverIp){
         
-        axisMultiplier = Point3f(-1, 1, 1);//0.001,0.001,0.001);
+        axisMultiplier = Point3f(-1,1,1);
         axisOrder = Point3f(1,0,2);
         
         pImpl = new MotionCaptureOptitrackImpl;
@@ -31,71 +31,65 @@ namespace libmotioncapture {
         pImpl->client.update();
     }
     
-    void MotionCaptureOptitrack::getObjects(std::vector<libmotioncapture::Object> & result) const{
+    Point3f MotionCaptureOptitrack::transformPoint(Point3f pt) const{
+        Point3f p;
+        p.x = pt[axisOrder.x]*axisMultiplier.x;
+        p.y = pt[axisOrder.y]*axisMultiplier.y;
+        p.z = pt[axisOrder.z]*axisMultiplier.z;
+        return p;
+    }
+    
+    Eigen::Vector3f MotionCaptureOptitrack::toEigen(Point3f pt) const{
+        return Eigen::Vector3f(pt.x, pt.y, pt.z);
+    }
+    
+    Eigen::Quaternionf MotionCaptureOptitrack::toEigen(Quaternion4f quat) const{
+        return Eigen::Quaternionf(quat.qw,quat.qx,quat.qy,quat.qz);
+    }
+    
+    const std::string MotionCaptureOptitrack::getName(RigidBody rb) const{
+        std::stringstream ss;
+        ss<<rb.id();
+        const std::string name = ss.str();
+        return name;
+    }
+    
+    Object MotionCaptureOptitrack::toObject(RigidBody rb) const{
+        const std::string name = getName(rb);
+        Point3f p = transformPoint(rb.location());
+        Eigen::Vector3f position = toEigen(p);
+        Eigen::Quaternionf rotation = toEigen(rb.orientation());
+        return Object(name, position, rotation);
+    }
+    
+    void MotionCaptureOptitrack::getObjects(std::vector<Object>& result) const{
         result.clear();
-/*
-        size_t count = 0;
-        if(pImpl->client.isNewFrameReady()){
-            std::vector<RigidBody> const & rBodies = pImpl->client.getLastFrame().rigidBodies();
-            count = rBodies.size();
-            result.resize(count);
-            for(size_t i=0;i<count;++i){
-                getObjectByRigidbody(rBodies[i],result[i]);
-            }
+        std::vector<RigidBody> const & rbs = pImpl->client.getLastFrame().rigidBodies();
+        size_t count = rbs.size();
+        result.resize(count);
+        for(size_t i=0;i<count;i++){
+            result[i] = toObject(rbs[i]);
         }
-*/
     }
     
-    
-/*
-    void MotionCaptureOptitrack::getObjectByRigidbody(const RigidBody & rb, libmotioncapture::Object & result) const{
-        
-        std::stringstream sstr;
-        sstr<<rb.id();
-        const std::string name = sstr.str();
-        
-        auto const translation = rb.location();
-        auto const quaternion = rb.orientation();
-        if(rb.trackingValid()){
-            Eigen::Vector3f position(translation.x/1000.0,
-                                     translation.y/1000.0,
-                                     translation.z/1000.0);
-            
-            Eigen::Quaternionf rotation(quaternion.qw,
-                                        quaternion.qx,
-                                        quaternion.qy,
-                                        quaternion.qz);
-            
-            result = Object(name, position, rotation);
-        }else{
-            result = Object(name);
-        }
-
-    }
-*/
-    /*
     void MotionCaptureOptitrack::getObjectByName(const std::string & name, libmotioncapture::Object & result) const{
-        std::vector<RigidBody> const & rBodies = pImpl->client.getLastFrame().rigidBodies();
-        for(size_t i=0;i<rBodies.size();++i){
-            std::stringstream sstr;
-            sstr<<rBodies[i].id();
-            const std::string ni = sstr.str();
-            if(ni==name){
-                //getObjectByRigidbody(rBodies[i],result);
+        std::vector<RigidBody> const & rbs = pImpl->client.getLastFrame().rigidBodies();
+        size_t count = rbs.size();
+        for(size_t i=0;i<count;i++){
+            const std::string curName = getName(rbs[i]);
+            if(curName==name){
+                result = toObject(rbs[i]);
+                return;
             }
         }
-    }*/
+    }
     
     void MotionCaptureOptitrack::getPointCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr result) const{
         result->clear();
         std::vector<Point3f> const & markers = pImpl->client.getLastFrame().unIdMarkers();
         size_t count = markers.size();
         for(size_t i=0;i<count;++i){
-            Point3f p;
-            p.x = markers[i][axisOrder.x]*axisMultiplier.x;
-            p.y = markers[i][axisOrder.y]*axisMultiplier.y;
-            p.z = markers[i][axisOrder.z]*axisMultiplier.z;
-            
+            Point3f p = transformPoint(markers[i]);
             result->push_back(pcl::PointXYZ(p.x,p.y,p.z));
         }
     }
@@ -125,4 +119,3 @@ namespace libmotioncapture {
         return true;
     }
 }
-
