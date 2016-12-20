@@ -1,12 +1,15 @@
 #pragma once
+#include <map>
 #include "libmotioncapture/motioncapture.h"
+#include "CDPParser/CDPClient.h"
 
 namespace libmotioncapture {
     class MotionCaptureCDPImpl;
     
     class MotionCaptureCDP : public MotionCapture{
     public:
-        MotionCaptureCDP(std::vector<uint32_t> _serials);
+        //map is <cf name, tag hex serial>
+        MotionCaptureCDP(std::map<std::string, std::string> _nameSerials);
         ~MotionCaptureCDP();
         
         const std::string & version() const;
@@ -14,11 +17,19 @@ namespace libmotioncapture {
         
         virtual void waitForNextFrame();
         virtual void getObjects(std::vector<Object>& result) const;
+        virtual void getObjectByName(const std::string & name, Object & result) const;
         
         virtual bool supportsObjectTracking() const;
         virtual bool supportsLatencyEstimate() const;
         virtual bool supportsPointCloud() const;
         
+        void setAxisRemapping();
+        Object toObject(CDPTag tag) const;
+        Eigen::Vector3f ptToEigen(float * pt) const;
+        Eigen::Quaternionf quatToEigen(float * quat) const;
+        
+        float axisMultiplier[3];
+        float axisOrder[3];
     private:
         MotionCaptureCDPImpl * pImpl;
     };

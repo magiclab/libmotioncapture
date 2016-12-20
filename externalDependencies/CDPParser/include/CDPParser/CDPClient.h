@@ -15,6 +15,10 @@
 #include "CDPFrame.h"
 
 //#define PRINT_PACKETS
+//#define GET_ALL_PKTS
+
+typedef std::map<std::string,std::string>::const_iterator NameIteratorByHex;
+typedef std::map<std::string,uint32_t>::const_iterator NameIteratorByDec;
 
 class CDPClient{
 public:
@@ -23,14 +27,46 @@ public:
         toSec = 1.0;
     }
     
+    void setup(std::map<std::string, std::string> _nameMap){
+        nameTableHex = _nameMap;
+        std::vector<uint32_t> _serials;
+        for(NameIteratorByHex it=nameTableHex.begin();it!=nameTableHex.end();it++){
+            uint32_t d = CDPFrameData::toDecSerial(it->second);
+            _serials.push_back(d);
+            nameTableDec[it->first] = d;
+            nameTableDecRev[d] = it->first;
+        }
+        setSerials(_serials);
+    }
     void setSerials(std::vector<uint32_t> _serials){cdpFrame.addSerials(_serials);}
+    void setSerials(std::vector<std::string> _serials){cdpFrame.addSerials(_serials);}
+    
+    std::string getHexSerialForName(string n){
+        return nameTableHex[n];
+    }
+    
+    uint32_t getDecSerialForName(string n){
+        return nameTableDec[n];
+    }
+    
+    std::string getNameForSerial(uint32_t d){
+        return nameTableDecRev[d];
+    }
+    
+    void setTimer(){
+#ifdef __APPLE__        
+        timeStart = std::clock();
+#else
+        timeStart = clock();
+#endif        
+    }
     
     void connect(std::string host = "239.255.76.67", int port=7667){
         bConnected = udp.Create();
         bConnected = udp.BindMcast((char *)host.c_str(), port);
         bConnected = udp.SetNonBlocking(true);
         
-        timeStart = clock();
+        setTimer();        
     }
     
     void disconnect(){udp.Close();}
@@ -45,16 +81,8 @@ public:
             }
         }
         cdpFrame.get(lastFrame);
-        timeStart = clock();
+        setTimer();
         cdpFrame.reset();
-        //if(checkTimeout()){
-        //    std::cout<<"TICK\n";
-        //    timeStart = std::clock();
-        //}
-        //while (!cdpFrame.isComplete()) {
-        //    getCDPData();
-        //}
-        //cdpFrame.reset();
     }
     
     bool isConnected(){return bConnected;}
@@ -72,7 +100,11 @@ public:
 private:
     
     bool checkTimeout(){
+#ifdef __APPLE__
+        timeCur = std::clock() - timeStart;
+#else
         timeCur = clock() - timeStart;
+#endif        
         double sec = timeCur/(double)CLOCKS_PER_SEC;
         return (sec>toSec);
     }
@@ -98,14 +130,16 @@ private:
                         parseQuat(_packet.GetSerialNumber(), _packet.GetSequence(), *_data_item.get());
                         
                     }
-                    //if(_data_item->GetType() == CDP_DATATYPE_MPU9250_GYROSCOPE){
-                    //parseGyro(_packet.GetSerialNumber(), _packet.GetSequence(), *_data_item.get());
+#ifdef GET_ALL_PKTS
+                    if(_data_item->GetType() == CDP_DATATYPE_MPU9250_GYROSCOPE){
+                    parseGyro(_packet.GetSerialNumber(), _packet.GetSequence(), *_data_item.get());
                     
-                    //}
-                    //if(_data_item->GetType() == CDP_DATATYPE_MPU9250_ACCELEROMETER){
-                    //parseAccel(_packet.GetSerialNumber(), _packet.GetSequence(), *_data_item.get());
+                    }
+                    if(_data_item->GetType() == CDP_DATATYPE_MPU9250_ACCELEROMETER){
+                    parseAccel(_packet.GetSerialNumber(), _packet.GetSequence(), *_data_item.get());
                     
-                    //}
+                    }
+#endif                    
                 }
             }
         }
@@ -146,8 +180,16 @@ private:
     CDPFrame cdpFrame;
     CDPFrameData lastFrame;
     UDPManager udp;
+    std::map<std::string, std::string>nameTableHex;
+    std::map<std::string,uint32_t>nameTableDec;
+    std::map<uint32_t,std::string>nameTableDecRev;
+#ifdef __APPLE__
+    std::clock_t timeStart;
+    std::clock_t timeCur;
+#else
     clock_t timeStart;
     clock_t timeCur;
+#endif    
     struct timespec lastTs;
     struct timeval timeout;
     bool bConnected;

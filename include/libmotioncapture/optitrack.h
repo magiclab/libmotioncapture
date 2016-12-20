@@ -37,3 +37,4 @@ namespace libmotioncapture {
         MotionCaptureOptitrackImpl * pImpl;
     };
 }
+

@@ -9,11 +9,19 @@ namespace libmotioncapture {
         std::string version;
     };
     
-    MotionCaptureCDP::MotionCaptureCDP(std::vector<uint32_t> _serials){
-       
-        
+    void MotionCaptureCDP::setAxisRemapping(){
+        axisOrder[0]=1;
+        axisOrder[1]=0;
+        axisOrder[2]=2;
+        axisMultiplier[0]=-1;
+        axisMultiplier[1]=1;
+        axisMultiplier[2]=1;
+    }
+    
+    MotionCaptureCDP::MotionCaptureCDP(std::map<std::string, std::string> _nameSerials){
+        setAxisRemapping();
         pImpl = new MotionCaptureCDPImpl;
-        pImpl->client.setSerials(_serials);
+        pImpl->client.setup(_nameSerials);
         pImpl->client.connect();
         pImpl->version = "1.0";
     }
@@ -34,24 +42,15 @@ namespace libmotioncapture {
         map<uint32_t,CDPFrameSlot>::iterator it;
         int i = 0;
         for(it=data.tags.begin();it!=data.tags.end();it++){
-            std::stringstream ss;
-            ss<<it->first;
-            const std::string name = ss.str();
-            
-            Eigen::Vector3f position(
-                it->second.getPosition()[0],
-                it->second.getPosition()[1],
-                it->second.getPosition()[2]);
-            
-            Eigen::Quaternionf rotation(
-                it->second.getQuaternion()[3],
-                it->second.getQuaternion()[0],
-                it->second.getQuaternion()[1],
-                it->second.getQuaternion()[2]);
-            
-            result[i] = Object(name, position, rotation);
+            result[i] = toObject(CDPTag(it->first, it->second));
             i++;
         }
+    }
+    
+    void MotionCaptureCDP::getObjectByName(const std::string & name, Object & result) const{
+        CDPFrameData data = pImpl->client.getLastFrame();
+        uint32_t d = pImpl->client.getDecSerialForName(name);
+        result = toObject(CDPTag(d,data.tags[d]));
     }
     
     MotionCaptureCDP::~MotionCaptureCDP(){
@@ -68,5 +67,32 @@ namespace libmotioncapture {
     
     bool MotionCaptureCDP::supportsPointCloud() const{
         return false;
+    }
+    
+    Eigen::Vector3f MotionCaptureCDP::ptToEigen(float * pt) const{
+        int id0 = axisOrder[0];
+        int id1 = axisOrder[1];
+        int id2 = axisOrder[2];
+        return Eigen::Vector3f(pt[id0]*axisMultiplier[0],
+                               pt[id1]*axisMultiplier[1],
+                               pt[id2]*axisMultiplier[2]);
+    }
+    
+    Eigen::Quaternionf MotionCaptureCDP::quatToEigen(float * quat) const{
+        int id0 = axisOrder[0];
+        int id1 = axisOrder[1];
+        int id2 = axisOrder[2];
+        float qx = quat[id0]*axisMultiplier[0];
+        float qy = quat[id1]*axisMultiplier[1];
+        float qz = quat[id2]*axisMultiplier[2];
+        float qw = quat[3];
+        return Eigen::Quaternionf(qw,qx,qy,qz);
+    }
+    
+    Object MotionCaptureCDP::toObject(CDPTag tag) const{
+        std::string name = pImpl->client.getNameForSerial(tag.first);
+        Eigen::Vector3f position = ptToEigen(tag.second.getPosition());
+        Eigen::Quaternionf rotation = quatToEigen(tag.second.getQuaternion());
+        return Object(name, position, rotation);
     }
 }

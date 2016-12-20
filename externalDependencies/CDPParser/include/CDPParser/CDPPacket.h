@@ -270,14 +270,33 @@ public:
         }
     }
     void ConvertPacketBuffer(const uint8_t* packet_buffer, uint16_t size){
-        uint16_t _index = 0;
+        uint16_t _index=0;
+        uint16_t _data_items_size = size-sizeof(cdp_header_t);
+        cdp_packet_t * _packet = (cdp_packet_t*)packet_buffer;
+        
+        mSerialNumber = le32toh(_packet->header.serial_number);
+        mSequence = le32toh(_packet->header.sequence);
+        
+        while(_index<_data_items_size){
+            CdpDataItem* _data_item = new CdpDataItem(_packet->data_items+_index);
+            if(_data_item->GetType()==0)break;
+            uint16_t dis = _data_item->GetSize();
+            _index += _data_item->GetSize();
+            if(dis>0){
+                AddDataItem(_data_item);
+            }else{
+                break;
+            }
+        }
+        
+        /*uint16_t _index = 0;
         uint16_t _data_items_size = (uint16_t)(sizeof(packet_buffer) - sizeof(cdp_header_t));
         cdp_packet_t* _packet = (cdp_packet_t*)packet_buffer;
         
         mSerialNumber = le32toh(_packet->header.serial_number);
         mSequence = le32toh(_packet->header.sequence);
         
-        while (_index < _data_items_size) {
+       while (_index < _data_items_size) {
             CdpDataItem* _data_item = new CdpDataItem(_packet->data_items + _index);
             if(_data_item->GetType() == 0){
                 break;
@@ -288,7 +307,7 @@ public:
             }else{
                 break;
             }
-        }
+       }*/
     }
     //@}
 

@@ -44,12 +44,16 @@ namespace libmotioncapture {
     }
     
     Eigen::Quaternionf MotionCaptureOptitrack::toEigen(Quaternion4f quat) const{
-        return Eigen::Quaternionf(quat.qw,quat.qx,quat.qy,quat.qz);
+        float qx = quat.getAxis(axisOrder.x)*axisMultiplier.x;
+        float qy = quat.getAxis(axisOrder.y)*axisMultiplier.y;
+        float qz = quat.getAxis(axisOrder.z)*axisMultiplier.z;
+        float qw = quat.qw;
+        return Eigen::Quaternionf(qw,qx,qy,qz);
     }
     
     const std::string MotionCaptureOptitrack::getName(RigidBody rb) const{
         std::stringstream ss;
-        ss<<rb.id();
+        ss<<"cf"<<rb.id();
         const std::string name = ss.str();
         return name;
     }
@@ -119,3 +123,4 @@ namespace libmotioncapture {
         return true;
     }
 }
+
