@@ -1,7 +1,7 @@
 #pragma once
 #include <map>
 #include "libmotioncapture/motioncapture.h"
-#include "CDPParser/CDPClient.h"
+//#include <CDPParser/CDPClient.h>
 
 namespace libmotioncapture {
     class MotionCaptureCDPImpl;
@@ -22,9 +22,12 @@ namespace libmotioncapture {
         virtual bool supportsObjectTracking() const;
         virtual bool supportsLatencyEstimate() const;
         virtual bool supportsPointCloud() const;
+
+        virtual void getPointCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr result) const{}
+        virtual void getLatency(std::vector<LatencyInfo> & result) const{}
         
         void setAxisRemapping();
-        Object toObject(CDPTag tag) const;
+        //Object toObject(std::pair<uint32_t, CDPFrameSlot> tag) const;
         Eigen::Vector3f ptToEigen(float * pt) const;
         Eigen::Quaternionf quatToEigen(float * quat) const;
         

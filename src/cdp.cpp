@@ -42,7 +42,11 @@ namespace libmotioncapture {
         map<uint32_t,CDPFrameSlot>::iterator it;
         int i = 0;
         for(it=data.tags.begin();it!=data.tags.end();it++){
-            result[i] = toObject(CDPTag(it->first, it->second));
+            std::string name = pImpl->client.getNameForSerial(it->first);
+            Eigen::Vector3f position = ptToEigen(it->second.getPosition());
+            Eigen::Quaternionf rotation = quatToEigen(it->second.getQuaternion());
+            result[i] = Object(name, position, rotation);
+            //result[i] = toObject(CDPTag(it->first, it->second));
             i++;
         }
     }
@@ -50,7 +54,11 @@ namespace libmotioncapture {
     void MotionCaptureCDP::getObjectByName(const std::string & name, Object & result) const{
         CDPFrameData data = pImpl->client.getLastFrame();
         uint32_t d = pImpl->client.getDecSerialForName(name);
-        result = toObject(CDPTag(d,data.tags[d]));
+        std::string nn = pImpl->client.getNameForSerial(d);
+        Eigen::Vector3f position = ptToEigen(data.tags[d].getPosition());
+        Eigen::Quaternionf rotation = quatToEigen(data.tags[d].getQuaternion());
+        result = Object(nn, position, rotation);
+        //result = toObject(CDPTag(d,data.tags[d]));
     }
     
     MotionCaptureCDP::~MotionCaptureCDP(){
@@ -89,10 +97,10 @@ namespace libmotioncapture {
         return Eigen::Quaternionf(qw,qx,qy,qz);
     }
     
-    Object MotionCaptureCDP::toObject(CDPTag tag) const{
+    /*Object toObject(CDPTag tag) {
         std::string name = pImpl->client.getNameForSerial(tag.first);
         Eigen::Vector3f position = ptToEigen(tag.second.getPosition());
         Eigen::Quaternionf rotation = quatToEigen(tag.second.getQuaternion());
         return Object(name, position, rotation);
-    }
+    }*/
 }
