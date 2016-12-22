@@ -22,7 +22,7 @@ typedef std::map<std::string,uint32_t>::const_iterator NameIteratorByDec;
 
 class CDPClient{
 public:
-    CDPClient(){
+    CDPClient() : posScale(0.001){
         bConnected=false;
         toSec = 1.0;
     }
@@ -83,6 +83,8 @@ public:
         cdpFrame.get(lastFrame);
         setTimer();
         cdpFrame.reset();
+
+        //std::cout<<lastFrame<<std::endl;
     }
     
     bool isConnected(){return bConnected;}
@@ -155,7 +157,7 @@ private:
 #ifdef PRINT_PACKETS
         std::cout << 0 << std::hex << serial_number << std::dec << " Pos (mm): (" << _pos->coordinates.x << ", " << _pos->coordinates.y << ", " << _pos->coordinates.z << ')' << std::endl;
 #endif
-        cdpFrame.setPosition(serial_number, _pos->coordinates.x,_pos->coordinates.y,_pos->coordinates.z);
+        cdpFrame.setPosition(serial_number, _pos->coordinates.x*posScale,_pos->coordinates.y*posScale,_pos->coordinates.z*posScale);
     }
     
     void parseQuat(uint32_t serial_number, uint32_t sequence_number, const CdpDataItem& data_item){
@@ -192,5 +194,6 @@ private:
 #endif    
     struct timespec lastTs;
     struct timeval timeout;
+    const float posScale;
     bool bConnected;
 };

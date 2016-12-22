@@ -33,6 +33,8 @@ namespace libmotioncapture {
         
         float axisMultiplier[3];
         float axisOrder[3];
+        float axisOrderQuat[4];
+        float axisMultiplierQuat[4];
     private:
         MotionCaptureCDPImpl * pImpl;
     };

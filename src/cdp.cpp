@@ -10,12 +10,19 @@ namespace libmotioncapture {
     };
     
     void MotionCaptureCDP::setAxisRemapping(){
-        axisOrder[0]=1;
-        axisOrder[1]=0;
+        axisOrder[0]=0;
+        axisOrder[1]=1;
         axisOrder[2]=2;
         axisMultiplier[0]=-1;
         axisMultiplier[1]=1;
         axisMultiplier[2]=1;
+        axisOrderQuat[0]=1;
+        axisOrderQuat[1]=2;
+        axisOrderQuat[2]=0;
+        axisOrderQuat[3]=3;
+        axisMultiplierQuat[0]=1;
+        axisMultiplierQuat[1]=-1;
+        axisMultiplierQuat[2]=1;
     }
     
     MotionCaptureCDP::MotionCaptureCDP(std::map<std::string, std::string> _nameSerials){
@@ -87,12 +94,13 @@ namespace libmotioncapture {
     }
     
     Eigen::Quaternionf MotionCaptureCDP::quatToEigen(float * quat) const{
-        int id0 = axisOrder[0];
-        int id1 = axisOrder[1];
-        int id2 = axisOrder[2];
-        float qx = quat[id0]*axisMultiplier[0];
-        float qy = quat[id1]*axisMultiplier[1];
-        float qz = quat[id2]*axisMultiplier[2];
+        int id0 = axisOrderQuat[0];
+        int id1 = axisOrderQuat[1];
+        int id2 = axisOrderQuat[2];
+
+        float qx = quat[id0]*axisMultiplierQuat[0];
+        float qy = quat[id1]*axisMultiplierQuat[1];
+        float qz = quat[id2]*axisMultiplierQuat[2];
         float qw = quat[3];
         return Eigen::Quaternionf(qw,qx,qy,qz);
     }

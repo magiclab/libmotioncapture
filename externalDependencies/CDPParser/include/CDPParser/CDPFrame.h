@@ -55,7 +55,7 @@ public:
     CDPZeroer() : bufSize(100){
         bReady = false;
         curBufId = 0;
-        bUse = true;
+        bUse = false;
         tags.clear();
     }
     
@@ -64,18 +64,21 @@ public:
             tags.insert(_sers.begin(), _sers.end());
         }else if(curBufId>=bufSize){
             for(TagIterator itBuf=tags.begin();itBuf!=tags.end();itBuf++){
-                itBuf->second.getPosition()[0] /= curBufId;
-                itBuf->second.getPosition()[1] /= curBufId;
-                itBuf->second.getPosition()[2] /= curBufId;
+                float xx = tags[itBuf->first].getPosition()[0] / float(curBufId);
+                float yy = tags[itBuf->first].getPosition()[1] / float(curBufId);
+                float zz = tags[itBuf->first].getPosition()[2] / float(curBufId);
+                tags[itBuf->first].setPosition(xx,yy,zz);
             }
             bReady = true;
         }else if(curBufId>0){
             if(tags.size()==_sers.size()){
                 TagIterator itNew = _sers.begin();
                 for(TagIterator itBuf=tags.begin();itBuf!=tags.end();itBuf++){
-                    itBuf->second.getPosition()[0] += itNew->second.getPosition()[0];
-                    itBuf->second.getPosition()[1] += itNew->second.getPosition()[1];
-                    itBuf->second.getPosition()[2] += itNew->second.getPosition()[2];
+                    float xx = tags[itBuf->first].getPosition()[0] + _sers[itNew->first].getPosition()[0];
+                    float yy = tags[itBuf->first].getPosition()[1] + _sers[itNew->first].getPosition()[1];
+                    float zz = tags[itBuf->first].getPosition()[2] + _sers[itNew->first].getPosition()[2];
+                    tags[itBuf->first].setPosition(xx,yy,zz);
+                    
                     itNew++;
                 }
             }
@@ -119,13 +122,13 @@ public:
     
     void insertAndZero(std::map<uint32_t, CDPFrameSlot> & _sers){
         if(zero.tags.size()==_sers.size()){
-            FrameIterator itNew = _sers.begin();
-            for(FrameIterator itZero = zero.tags.begin(); itZero!=zero.tags.end();itZero++){
+            TagIterator itNew = _sers.begin();
+            for(TagIterator itZero = zero.tags.begin(); itZero!=zero.tags.end();itZero++){
                 float pp[3];
                 for(int i=0;i<3;i++){
-                    pp[i] = itNew->second.getPosition()[i] - itZero->second.getPosition()[i];
+                    pp[i] = _sers[itNew->first].getPosition()[i] - tags[itZero->first].getPosition()[i];
                 }
-                itNew->second.setPosition(pp[0],pp[1],pp[2]);
+                _sers[itNew->first].setPosition(pp[0],pp[1],pp[2]);
                 tags.insert(std::pair<uint32_t, CDPFrameSlot>(itNew->first, itNew->second));
                 itNew++;
             }
