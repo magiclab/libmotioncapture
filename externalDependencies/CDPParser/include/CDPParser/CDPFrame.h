@@ -50,6 +50,52 @@ protected:
 typedef std::map<uint32_t, CDPFrameSlot>::const_iterator TagIterator;
 typedef std::pair<uint32_t, CDPFrameSlot> CDPTag;
 
+class CDPZeroer{
+public:
+    CDPZeroer() : bufSize(100){
+        bReady = false;
+        curBufId = 0;
+        bUse = true;
+        tags.clear();
+    }
+    
+    void updateBuffer(std::map<uint32_t, CDPFrameSlot> & _sers){
+        if(curBufId==0){
+            tags.insert(_sers.begin(), _sers.end());
+        }else if(curBufId>=bufSize){
+            for(TagIterator itBuf=tags.begin();itBuf!=tags.end();itBuf++){
+                itBuf->second.getPosition()[0] /= curBufId;
+                itBuf->second.getPosition()[1] /= curBufId;
+                itBuf->second.getPosition()[2] /= curBufId;
+            }
+            bReady = true;
+        }else if(curBufId>0){
+            if(tags.size()==_sers.size()){
+                TagIterator itNew = _sers.begin();
+                for(TagIterator itBuf=tags.begin();itBuf!=tags.end();itBuf++){
+                    itBuf->second.getPosition()[0] += itNew->second.getPosition()[0];
+                    itBuf->second.getPosition()[1] += itNew->second.getPosition()[1];
+                    itBuf->second.getPosition()[2] += itNew->second.getPosition()[2];
+                    itNew++;
+                }
+            }
+        }
+        curBufId++;
+        
+    }
+    
+    void setUsed(bool b){bUse=b;}
+    bool isReady(){return bReady;}
+    bool isUsed(){return bUse;}
+    
+    std::map<uint32_t, CDPFrameSlot> tags;
+protected:
+    const int bufSize;
+    int curBufId;
+    bool bReady;
+    bool bUse;
+};
+
 class CDPFrameData{
 public:
     enum FrameResult{
@@ -70,6 +116,21 @@ public:
     bool isNew(){return bNew;}
     FrameResult getResult(){return result;}
     void setResult(FrameResult fr){result=fr;}
+    
+    void insertAndZero(std::map<uint32_t, CDPFrameSlot> & _sers){
+        if(zero.tags.size()==_sers.size()){
+            FrameIterator itNew = _sers.begin();
+            for(FrameIterator itZero = zero.tags.begin(); itZero!=zero.tags.end();itZero++){
+                float pp[3];
+                for(int i=0;i<3;i++){
+                    pp[i] = itNew->second.getPosition()[i] - itZero->second.getPosition()[i];
+                }
+                itNew->second.setPosition(pp[0],pp[1],pp[2]);
+                tags.insert(std::pair<uint32_t, CDPFrameSlot>(itNew->first, itNew->second));
+                itNew++;
+            }
+        }
+    }
     
     static std::string toHexSerial(const uint32_t & tId){
         std::stringstream ss;
@@ -96,6 +157,7 @@ public:
     }
     
     std::map<uint32_t, CDPFrameSlot> tags;
+    CDPZeroer zero;
 protected:
     FrameResult result;
     bool bNew;
@@ -184,6 +246,22 @@ public:
     }
     
     void get(CDPFrameData & data){
+        if(data.zero.isUsed()){
+            if(data.zero.isReady()){
+                data.reset();
+                data.setNew();
+                data.insertAndZero(serials);
+                data.setResult(result);
+            }else{
+                setUnzeroedData(data);
+                data.zero.updateBuffer(serials);
+            }
+        }else{
+            setUnzeroedData(data);
+        }
+    }
+    
+    void setUnzeroedData(CDPFrameData & data){
         data.reset();
         data.setNew();
         data.tags.insert(serials.begin(), serials.end());
